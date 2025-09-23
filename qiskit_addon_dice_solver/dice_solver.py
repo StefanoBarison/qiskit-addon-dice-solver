@@ -170,13 +170,14 @@ def solve_hci(
     nelec: tuple[int, int],
     ci_strs: tuple[np.ndarray, np.ndarray] | None = None,
     spin_sq: float | None = None,
+    n_roots: int = 1,
     select_cutoff: float = 5e-4,
     energy_tol: float = 1e-10,
     max_iter: int = 10,
     mpirun_options: Sequence[str] | str | None = None,
     temp_dir: str | Path | None = None,
     clean_temp_dir: bool = True,
-) -> tuple[float, SCIState, tuple[np.ndarray, np.ndarray]]:
+) -> tuple[float, SCIState, tuple[np.ndarray, np.ndarray]] | tuple[list[float], list[SCIState], list[tuple[np.ndarray, np.ndarray]]]:
     """
     Approximate the ground state of a molecular Hamiltonian using the heat bath configuration interaction method.
 
@@ -255,6 +256,7 @@ def solve_hci(
         num_dn=n_beta,
         dice_dir=dice_dir,
         spin_sq=spin_sq,
+        n_roots=n_roots,
         select_cutoff=select_cutoff,
         energy_tol=energy_tol,
         max_iter=max_iter,
@@ -264,17 +266,28 @@ def solve_hci(
     _call_dice(dice_dir, mpirun_options)
 
     # Read and convert outputs
-    e_dice, sci_state, avg_occupancies = _read_dice_outputs(dice_dir, norb, nelec)
+    e_dice, sci_state, avg_occupancies = _read_dice_outputs(dice_dir, norb, nelec, n_roots)
 
     # Clean up the temp directory of intermediate files, if desired
     if clean_temp_dir:
         shutil.rmtree(dice_dir)
 
-    return (
-        e_dice,
-        sci_state,
-        (avg_occupancies[:norb], avg_occupancies[norb:]),
-    )
+    # Divide avg occumpancies in spin up and down orbitals and return
+    if n_roots > 1:
+        avg_occupancies_split = []
+        for avg_occ in avg_occupancies:
+            avg_occupancies_split.append((avg_occ[:norb], avg_occ[norb:]))
+        return (
+            e_dice, 
+            sci_state, 
+            avg_occupancies_split,
+        )
+    elif n_roots == 1:
+        return (
+            e_dice,
+            sci_state,
+            (avg_occupancies[:norb], avg_occupancies[norb:]),
+        )
 
 
 def solve_fermion(
@@ -380,9 +393,27 @@ def solve_fermion(
 
 
 def _read_dice_outputs(
-    dice_dir: str | Path, norb: int, nelec: tuple[int, int]
-) -> tuple[float, SCIState, np.ndarray]:
+    dice_dir: str | Path, 
+    norb: int, 
+    nelec: tuple[int, int],
+    n_roots: int = 1,
+) -> tuple[float, SCIState, np.ndarray] | tuple[list[float], list[SCIState], list[np.ndarray]]:
     """Calculate the estimated ground state energy and average orbitals occupancies from Dice outputs."""
+
+    ## Code for multiple roots
+    if n_roots > 1:
+        avg_occupancies = []
+        for root in range(n_roots):
+            spin1_rdm_dice = np.loadtxt(os.path.join(dice_dir, f"spin1RDM.{root}.{root}.txt"), skiprows=1)
+            avg_occupancy = np.zeros(2 * norb)
+            for i in range(spin1_rdm_dice.shape[0]):
+                if spin1_rdm_dice[i, 0] == spin1_rdm_dice[i, 1]:
+                    orbital_id = spin1_rdm_dice[i, 0]
+                    parity = orbital_id % 2
+                    avg_occupancy[int(orbital_id // 2 + parity * norb)] = spin1_rdm_dice[i, 2]
+            # Append the n-th root avg occupancies to the list
+            avg_occupancies.append(avg_occupancy)
+
     # Read in the avg orbital occupancies
     spin1_rdm_dice = np.loadtxt(os.path.join(dice_dir, "spin1RDM.0.0.txt"), skiprows=1)
     avg_occupancies = np.zeros(2 * norb)
@@ -394,22 +425,49 @@ def _read_dice_outputs(
 
     # Read in the estimated ground state energy
     file_energy = open(os.path.join(dice_dir, "shci.e"), "rb")
+    
+    ## Trial for multiple roots energy reading
+    #format = ["d"] * n_roots
+    #calc_e = struct.unpack(format, file_energy.read())
+    #file_energy.close()
+    ## Now format for multiple or single roots
+    #if n_roots == 1:
+    #    energy_dice = calc_e[0]
+    #else:
+    #    energy_dice = list(calc_e)
+
     bytestring_energy = file_energy.read(8)
     energy_dice = struct.unpack("d", bytestring_energy)[0]
 
     # Construct the SCI wavefunction coefficients from Dice output dets.bin
-    occs, amps = _read_wave_function_magnitudes(os.path.join(dice_dir, "dets.bin"))
-    ci_strs = _ci_strs_from_occupancies(occs)
-    sci_coefficients, ci_strs_a, ci_strs_b = _construct_ci_vec_from_amplitudes(
-        amps, ci_strs
-    )
-    sci_state = SCIState(
-        amplitudes=sci_coefficients,
-        ci_strs_a=ci_strs_a,
-        ci_strs_b=ci_strs_b,
-        norb=norb,
-        nelec=nelec,
-    )
+    if n_roots == 1:
+        occs, amps = _read_wave_function_magnitudes(os.path.join(dice_dir, "dets.bin"))
+        ci_strs = _ci_strs_from_occupancies(occs)
+        sci_coefficients, ci_strs_a, ci_strs_b = _construct_ci_vec_from_amplitudes(
+            amps, ci_strs
+        )
+        sci_state = SCIState(
+            amplitudes=sci_coefficients,
+            ci_strs_a=ci_strs_a,
+            ci_strs_b=ci_strs_b,
+            norb=norb,
+            nelec=nelec,
+        )
+    elif n_roots > 1:
+        sci_state = []
+        for root in range(n_roots):
+            occs, amps = _read_wave_function_magnitudes(os.path.join(dice_dir, f"dets_{root}.bin"))
+            ci_strs = _ci_strs_from_occupancies(occs)
+            sci_coefficients, ci_strs_a, ci_strs_b = _construct_ci_vec_from_amplitudes(
+                amps, ci_strs
+            )
+            sci_state.append(SCIState(
+                amplitudes=sci_coefficients,
+                ci_strs_a=ci_strs_a,
+                ci_strs_b=ci_strs_b,
+                norb=norb,
+                nelec=nelec,
+            ))
 
     return energy_dice, sci_state, avg_occupancies
 
@@ -450,6 +508,7 @@ def _write_input_files(
     num_dn: int,
     dice_dir: str | Path,
     spin_sq: float | None,
+    n_roots: int,
     select_cutoff: float,
     energy_tol: float,
     max_iter: int,
@@ -462,7 +521,7 @@ def _write_input_files(
     ### Write the input.dat ###
     num_elec = num_up + num_dn
     # Return only the lowest-energy state
-    nroots = "nroots 1\n"
+    nroots = f"nroots {n_roots}\n"
     # Spin squared
     spin = f"spin {spin_sq}\n" if spin_sq is not None else ""
     # Path to active space dump
