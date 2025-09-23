@@ -413,15 +413,15 @@ def _read_dice_outputs(
                     avg_occupancy[int(orbital_id // 2 + parity * norb)] = spin1_rdm_dice[i, 2]
             # Append the n-th root avg occupancies to the list
             avg_occupancies.append(avg_occupancy)
-
-    # Read in the avg orbital occupancies
-    spin1_rdm_dice = np.loadtxt(os.path.join(dice_dir, "spin1RDM.0.0.txt"), skiprows=1)
-    avg_occupancies = np.zeros(2 * norb)
-    for i in range(spin1_rdm_dice.shape[0]):
-        if spin1_rdm_dice[i, 0] == spin1_rdm_dice[i, 1]:
-            orbital_id = spin1_rdm_dice[i, 0]
-            parity = orbital_id % 2
-            avg_occupancies[int(orbital_id // 2 + parity * norb)] = spin1_rdm_dice[i, 2]
+    elif n_roots == 1:
+        # Read in the avg orbital occupancies
+        spin1_rdm_dice = np.loadtxt(os.path.join(dice_dir, "spin1RDM.0.0.txt"), skiprows=1)
+        avg_occupancies = np.zeros(2 * norb)
+        for i in range(spin1_rdm_dice.shape[0]):
+            if spin1_rdm_dice[i, 0] == spin1_rdm_dice[i, 1]:
+                orbital_id = spin1_rdm_dice[i, 0]
+                parity = orbital_id % 2
+                avg_occupancies[int(orbital_id // 2 + parity * norb)] = spin1_rdm_dice[i, 2]
 
     # Read in the estimated ground state energy
     file_energy = open(os.path.join(dice_dir, "shci.e"), "rb")
@@ -521,7 +521,7 @@ def _write_input_files(
     ### Write the input.dat ###
     num_elec = num_up + num_dn
     # Return only the lowest-energy state
-    nroots = f"nroots {n_roots}\n"
+    nroots = f"nroots {int(n_roots)}\n"
     # Spin squared
     spin = f"spin {spin_sq}\n" if spin_sq is not None else ""
     # Path to active space dump
