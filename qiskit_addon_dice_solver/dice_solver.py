@@ -456,7 +456,10 @@ def _read_dice_outputs(
     elif n_roots > 1:
         sci_state = []
         for root in range(n_roots):
-            occs, amps = _read_wave_function_magnitudes(os.path.join(dice_dir, f"dets_{root}.bin"))
+            if root == 0:
+                occs, amps = _read_wave_function_magnitudes(os.path.join(dice_dir, "dets.bin"))
+            else:
+                occs, amps = _read_wave_function_magnitudes(os.path.join(dice_dir, f"dets_{root}.bin"))
             ci_strs = _ci_strs_from_occupancies(occs)
             sci_coefficients, ci_strs_a, ci_strs_b = _construct_ci_vec_from_amplitudes(
                 amps, ci_strs
