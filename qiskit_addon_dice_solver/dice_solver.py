@@ -426,18 +426,18 @@ def _read_dice_outputs(
     # Read in the estimated ground state energy
     file_energy = open(os.path.join(dice_dir, "shci.e"), "rb")
     
-    ## Trial for multiple roots energy reading
-    #format = ["d"] * n_roots
-    #calc_e = struct.unpack(format, file_energy.read())
-    #file_energy.close()
-    ## Now format for multiple or single roots
-    #if n_roots == 1:
-    #    energy_dice = calc_e[0]
-    #else:
-    #    energy_dice = list(calc_e)
+    # Trial for multiple roots energy reading
+    format = ["d"] * n_roots
+    calc_e = struct.unpack(format, file_energy.read())
+    file_energy.close()
+    # Now format for multiple or single roots
+    if n_roots == 1:
+        energy_dice = calc_e[0]
+    else:
+        energy_dice = list(calc_e)
 
-    bytestring_energy = file_energy.read(8)
-    energy_dice = struct.unpack("d", bytestring_energy)[0]
+    #bytestring_energy = file_energy.read(8)
+    #energy_dice = struct.unpack("d", bytestring_energy)[0]
 
     # Construct the SCI wavefunction coefficients from Dice output dets.bin
     if n_roots == 1:
