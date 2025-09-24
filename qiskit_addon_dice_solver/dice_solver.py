@@ -427,8 +427,9 @@ def _read_dice_outputs(
     file_energy = open(os.path.join(dice_dir, "shci.e"), "rb")
     
     # Trial for multiple roots energy reading
-    format = ["d"] * n_roots
-    calc_e = struct.unpack(format, file_energy.read())
+    format_file = ["d"] * n_roots
+    format_file = "".join(format_file)
+    calc_e = struct.unpack(format_file, file_energy.read())
     file_energy.close()
     # Now format for multiple or single roots
     if n_roots == 1:
