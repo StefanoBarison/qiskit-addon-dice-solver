@@ -58,6 +58,7 @@ def solve_sci(
     *,
     # TODO allow spin_sq to be None
     spin_sq: float | None = None,
+    n_roots: int = 1,
     mpirun_options: Sequence[str] | str | None = None,
     temp_dir: str | Path | None = None,
     clean_temp_dir: bool = True,
@@ -96,6 +97,7 @@ def solve_sci(
         nelec=nelec,
         ci_strs=ci_strings,
         spin_sq=spin_sq,
+        n_roots = n_roots,
         # Large select cutoff to prevent the addition of additional configurations
         select_cutoff=2147483647,
         energy_tol=1e-10,
@@ -115,6 +117,7 @@ def solve_sci_batch(
     nelec: tuple[int, int],
     *,
     spin_sq: float | None = None,
+    n_roots: int = 1,
     mpirun_options: Sequence[str] | str | None = None,
     temp_dir: str | Path | None = None,
     clean_temp_dir: bool = True,
@@ -154,6 +157,7 @@ def solve_sci_batch(
             norb=norb,
             nelec=nelec,
             spin_sq=spin_sq,
+            n_roots = n_roots,
             mpirun_options=mpirun_options,
             temp_dir=temp_dir,
             clean_temp_dir=clean_temp_dir,
@@ -296,6 +300,7 @@ def solve_fermion(
     hcore: np.ndarray,
     eri: np.ndarray,
     *,
+    n_roots: int = 1,
     open_shell: bool = False,
     mpirun_options: Sequence[str] | str | None = None,
     temp_dir: str | Path | None = None,
@@ -381,6 +386,7 @@ def solve_fermion(
         ci_strs=ci_strs,
         # Hard-code S^2 = 0 until other values are supported
         spin_sq=0.0,
+        n_roots=n_roots,
         # Large select cutoff to prevent the addition of additional configurations
         select_cutoff=2147483647,
         energy_tol=1e-10,
