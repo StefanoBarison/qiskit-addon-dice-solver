@@ -439,7 +439,7 @@ def solve_hci(
 
     # Read and convert outputs
     e_dice, sci_state, avg_occupancies = _read_dice_outputs(
-        dice_dir, norb, nelec, cartesian_product
+        dice_dir, norb, nelec, cartesian_product, n_roots
     )
 
     # Clean up the temp directory of intermediate files, if desired
