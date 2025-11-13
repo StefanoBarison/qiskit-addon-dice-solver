@@ -412,6 +412,9 @@ def solve_hci(
     temp_dir = temp_dir or tempfile.gettempdir()
     dice_dir = Path(tempfile.mkdtemp(prefix="dice_cli_files_", dir=temp_dir))
 
+    # We want to see the temporary directory in order to look for it later
+    print("Dice temporary directory: ",dice_dir)
+
     # Write the integrals out as an FCI dump for Dice command line app
     active_space_path = dice_dir / "fcidump.txt"
     tools.fcidump.from_integrals(active_space_path, hcore, eri, norb, nelec)
@@ -729,7 +732,7 @@ def _write_input_files(
     # Number of perturbation theory parameters. Must be 0.
     n_pt_iter = "nPTiter 0\n"
     # Requested reduced density matrices
-    rdms = "DoSpinRDM\nDoRDM\nDoSpinOneRDM\nDoOneRDM\n"
+    rdms = "DoSpinRDM\nDoRDM\nDoSpinOneRDM\nDoOneRDM\nTransitionRDM\n"
     # Number of electrons
     nocc = f"nocc {num_elec}\n"
     # An input which will be ignored by the modified Dice application.
