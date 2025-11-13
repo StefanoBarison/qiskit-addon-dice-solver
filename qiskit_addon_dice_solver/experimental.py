@@ -627,7 +627,7 @@ def _read_dice_outputs(
         occs, amps = _read_wave_function_magnitudes(os.path.join(dice_dir, "dets.bin"))
         ci_strs = _ci_strs_from_occupancies(occs)
         sci_coefficients, ci_strs_a, ci_strs_b = _construct_ci_vec_from_amplitudes(
-            amps, ci_strs
+            amps, ci_strs, cartesian_product
         )
         sci_state = experimental_SCIState(
             amplitudes=sci_coefficients,
@@ -645,7 +645,7 @@ def _read_dice_outputs(
                 occs, amps = _read_wave_function_magnitudes(os.path.join(dice_dir, f"dets_{root}.bin"))
             ci_strs = _ci_strs_from_occupancies(occs)
             sci_coefficients, ci_strs_a, ci_strs_b = _construct_ci_vec_from_amplitudes(
-                amps, ci_strs
+                amps, ci_strs, cartesian_product
             )
             sci_state.append(experimental_SCIState(
                 amplitudes=sci_coefficients,
